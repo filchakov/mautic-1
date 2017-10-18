@@ -11,10 +11,15 @@
 
 namespace Mautic\EmailBundle\Event;
 
+use AppKernel;
+use Exception;
 use Mautic\CoreBundle\Event\CommonEvent;
 use Mautic\EmailBundle\Entity\Email;
 use Mautic\EmailBundle\Helper\MailHelper;
 use Mautic\LeadBundle\Entity\Lead;
+use PDO;
+use PDOException;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Class EmailSendEvent.
@@ -162,6 +167,50 @@ class EmailSendEvent extends CommonEvent
     public function getContent($replaceTokens = false)
     {
         if ($this->helper !== null) {
+            /*$kernel = new AppKernel('prod', false);
+            $kernel->boot();
+            $container = $kernel->getContainer();
+            $request   = Request::createFromGlobals();
+            $container->enterScope('request');
+            $container->set('request', $request, 'request');
+
+            $hostname = $container->getParameter('mautic.db_host');
+            $username = $container->getParameter('mautic.db_user');
+            $password = $container->getParameter('mautic.db_password');
+            $dbname = $container->getParameter('mautic.db_name');
+
+            $dbh = null;
+
+            try {
+                $dbh = new PDO("mysql:host=$hostname;dbname=$dbname", $username, $password);
+            } catch (PDOException $e) {
+                throw new Exception('Problem with connection to DB');
+            }
+
+            $tags = $dbh->prepare("SELECT id from emails where emails.name = ?");
+            $tags->execute([$this->helper->getSubject()]);
+
+            $content_from_db = $tags->fetchAll();
+
+
+            if(empty($content_from_db)){
+                $content = $this->helper->getBody();
+            } else {
+
+                try {
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, 'https://mautic-extension.local/api/email/' . $content_from_db[0]['id'] . '?project=' . $this->getLead()['projects']);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                    $tmp_content = json_decode(trim(curl_exec($ch)), 1);
+                    $content = $tmp_content['body'];
+                } catch (Exception $e){
+                    $content = $this->helper->getBody();
+                }
+
+            }*/
             $content = $this->helper->getBody();
         } else {
             $content = $this->content;
@@ -298,6 +347,30 @@ class EmailSendEvent extends CommonEvent
 
         if ($includeGlobal && null !== $this->helper) {
             $tokens = array_merge($this->helper->getGlobalTokens(), $tokens);
+        }
+
+        if (
+            isset($tokens['{contactfield=jobs_feed}']) ||
+            isset($tokens['{leadfield=jobs_feed}'])
+        ) {
+            /*$ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, 'https://cd.local/ws/job_feed.php?email=filchakov.denis@gmail.com');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+
+            $content = trim(curl_exec($ch));
+            if(empty(curl_error($ch))){
+                $content = json_decode($content, 1);
+                $tokens['{contactfield=jobs_feed}'] = '<ul>';
+                foreach ($content['result'] as $job){
+                    $tokens['{contactfield=jobs_feed}'] .= '<li><ul><li><a href="'.$job['url'].'">'.$job['url'].'</a></li><li>'.$job['description'].'</li></ul>'.$job['title'].'</li>';
+                }
+                $tokens['{contactfield=jobs_feed}'] .= '<ul>';
+                $tokens['{leadfield=jobs_feed}'] = $tokens['{contactfield=jobs_feed}'];
+            }
+            curl_close($ch);*/
         }
 
         return $tokens;
